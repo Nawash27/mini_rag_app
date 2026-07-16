@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mini RAG — Document Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1b2a4a;
+    --parchment: #f5f0e1;
+    --card: #fffaf0;
+    --amber: #c98a2c;
+    --amber-dark: #a8721e;
+    --forest: #2f5233;
+    --rust: #a13d2f;
+    --line: #d8cdb0;
+    --muted: #6b6455;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--parchment);
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(27,42,74,0.05) 1px, transparent 0);
+    background-size: 22px 22px;
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+  }
+
+  .wrap {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  header {
+    margin-bottom: 40px;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 20px;
+  }
+
+  .eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--amber-dark);
+    margin-bottom: 8px;
+  }
+
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-optical-sizing: auto;
+    font-weight: 600;
+    font-size: 40px;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+
+  .sub {
+    color: var(--muted);
+    font-size: 15px;
+    max-width: 560px;
+  }
+
+  .desk {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 32px;
+  }
+
+  @media (max-width: 720px) {
+    .desk { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 24px;
+    position: relative;
+  }
+
+  .panel::before {
+    content: attr(data-step);
+    position: absolute;
+    top: -12px;
+    left: 20px;
+    background: var(--ink);
+    color: var(--parchment);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 3px;
+    letter-spacing: 0.05em;
+  }
+
+  .panel h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 19px;
+    font-weight: 600;
+    margin: 6px 0 16px;
+  }
+
+  input[type="file"] {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    width: 100%;
+    padding: 10px;
+    border: 1px dashed var(--line);
+    border-radius: 4px;
+    background: rgba(0,0,0,0.015);
+    margin-bottom: 14px;
+  }
+
+  select, input[type="text"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: #fff;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    margin-bottom: 14px;
+    color: var(--ink);
+  }
+
+  select:focus, input:focus {
+    outline: 2px solid var(--amber);
+    outline-offset: 1px;
+  }
+
+  button {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.03em;
+    background: var(--ink);
+    color: var(--parchment);
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  button:hover { background: var(--amber-dark); }
+  button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+  #uploadStatus {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    margin-top: 10px;
+    color: var(--forest);
+  }
+  #uploadStatus.error { color: var(--rust); }
+
+  .answer-section {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 24px;
+    min-height: 60px;
+  }
+
+  #answer {
+    font-size: 15px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+  }
+  #answer.error { color: var(--rust); font-family: 'IBM Plex Mono', monospace; font-size: 13px; }
+  #answer.placeholder { color: var(--muted); font-style: italic; }
+
+  .cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 20px;
+  }
+
+  .card-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .index-card {
+    background: #fffef8;
+    border: 1px solid var(--line);
+    border-top: 3px dashed var(--amber);
+    border-radius: 2px;
+    padding: 12px 14px;
+    width: 220px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: #45402f;
+    box-shadow: 2px 3px 0 rgba(27,42,74,0.06);
+    transform: rotate(var(--tilt, 0deg));
+  }
+
+  .index-card:nth-child(1) { --tilt: -1.2deg; }
+  .index-card:nth-child(2) { --tilt: 0.8deg; }
+  .index-card:nth-child(3) { --tilt: -0.5deg; }
+
+  .index-card::before {
+    content: "CHUNK #" attr(data-n);
+    display: block;
+    color: var(--amber-dark);
+    font-weight: 500;
+    margin-bottom: 6px;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Retrieval-Augmented Q&A</div>
+    <h1>The Document Desk</h1>
+    <p class="sub">Hand it a PDF. It reads, indexes, and answers — every answer backed by the actual passages it pulled from the page.</p>
+  </header>
+
+  <div class="desk">
+    <div class="panel" data-step="STEP 1">
+      <h3>File a document</h3>
+      <input type="file" id="pdfFile" accept=".pdf" />
+      <button onclick="uploadPDF()">Upload & index</button>
+      <div id="uploadStatus"></div>
+    </div>
+
+    <div class="panel" data-step="STEP 2">
+      <h3>Ask it something</h3>
+      <select id="docSelect"></select>
+      <input type="text" id="questionInput" placeholder="e.g. What experience does this person have?" />
+      <button onclick="askQuestion()">Ask</button>
+    </div>
+  </div>
+
+  <div class="answer-section">
+    <div class="card-label">Answer</div>
+    <div id="answer" class="placeholder">Upload a document and ask a question to see a grounded answer here.</div>
+    <div id="sourcesWrap"></div>
+  </div>
+</div>
+
+<script>
+  async function loadDocuments() {
+    const res = await fetch('/documents');
+    const data = await res.json();
+    const select = document.getElementById('docSelect');
+    select.innerHTML = '';
+    if (data.documents.length === 0) {
+      const opt = document.createElement('option');
+      opt.textContent = 'No documents yet — upload one';
+      select.appendChild(opt);
+      return;
+    }
+    data.documents.forEach(doc => {
+      const option = document.createElement('option');
+      option.value = doc;
+      option.textContent = doc;
+      select.appendChild(option);
+    });
+  }
+
+  async function uploadPDF() {
+    const fileInput = document.getElementById('pdfFile');
+    const status = document.getElementById('uploadStatus');
+    if (!fileInput.files.length) {
+      status.textContent = 'Choose a PDF first.';
+      status.className = 'error';
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+
+    status.textContent = 'Reading and indexing...';
+    status.className = '';
+
+    try {
+      const res = await fetch('/upload', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (res.ok) {
+        status.textContent = `Indexed — ${data.num_chunks} chunks ready.`;
+        status.className = '';
+        loadDocuments();
+      } else {
+        status.textContent = data.detail;
+        status.className = 'error';
+      }
+    } catch (err) {
+      status.textContent = 'Could not reach the server.';
+      status.className = 'error';
+    }
+  }
+
+  async function askQuestion() {
+    const docId = document.getElementById('docSelect').value;
+    const query = document.getElementById('questionInput').value;
+    const answerBox = document.getElementById('answer');
+    const sourcesWrap = document.getElementById('sourcesWrap');
+    sourcesWrap.innerHTML = '';
+
+    if (!docId) {
+      answerBox.textContent = 'Upload a document first.';
+      answerBox.className = 'error';
+      return;
+    }
+    if (!query.trim()) {
+      answerBox.textContent = 'Type a question first.';
+      answerBox.className = 'error';
+      return;
+    }
+
+    answerBox.textContent = 'Searching the document...';
+    answerBox.className = 'placeholder';
+
+    try {
+      const res = await fetch('/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, doc_id: docId })
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        answerBox.textContent = data.answer;
+        answerBox.className = '';
+
+        if (data.sources && data.sources.length) {
+          const label = document.createElement('div');
+          label.className = 'card-label';
+          label.style.marginTop = '18px';
+          label.textContent = 'Pulled from';
+          sourcesWrap.appendChild(label);
+
+          const cards = document.createElement('div');
+          cards.className = 'cards';
+          data.sources.forEach((src, i) => {
+            const card = document.createElement('div');
+            card.className = 'index-card';
+            card.setAttribute('data-n', i + 1);
+            card.textContent = src + '…';
+            cards.appendChild(card);
+          });
+          sourcesWrap.appendChild(cards);
+        }
+      } else {
+        answerBox.textContent = data.detail;
+        answerBox.className = 'error';
+      }
+    } catch (err) {
+      answerBox.textContent = 'Could not reach the server.';
+      answerBox.className = 'error';
+    }
+  }
+
+  loadDocuments();
+</script>
+
+</body>
+</html>

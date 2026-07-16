@@ -1,0 +1,104 @@
+<!-- <!DOCTYPE html>
+<html>
+<head>
+  <title>Mini RAG App</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; }
+    h1 { color: #333; }
+    section { margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+    button { padding: 8px 16px; cursor: pointer; }
+    input[type="text"], select { width: 100%; padding: 8px; margin: 8px 0; box-sizing: border-box; }
+    #answer { white-space: pre-wrap; background: #f5f5f5; padding: 12px; border-radius: 6px; margin-top: 10px; }
+    .error { color: #b00020; }
+  </style>
+</head>
+<body>
+
+  <h1>📄 Mini RAG App</h1>
+
+  <section>
+    <h3>1. Upload a PDF</h3>
+    <input type="file" id="pdfFile" accept=".pdf" />
+    <button onclick="uploadPDF()">Upload</button>
+    <p id="uploadStatus"></p>
+  </section>
+
+  <section>
+    <h3>2. Ask a Question</h3>
+    <label>Select document:</label>
+    <select id="docSelect"></select>
+
+    <input type="text" id="questionInput" placeholder="Ask something about this document..." />
+    <button onclick="askQuestion()">Ask</button>
+
+    <div id="answer"></div>
+  </section>
+
+  <script>
+    async function loadDocuments() {
+      const res = await fetch('/documents');
+      const data = await res.json();
+      const select = document.getElementById('docSelect');
+      select.innerHTML = '';
+      data.documents.forEach(doc => {
+        const option = document.createElement('option');
+        option.value = doc;
+        option.textContent = doc;
+        select.appendChild(option);
+      });
+    }
+
+    async function uploadPDF() {
+      const fileInput = document.getElementById('pdfFile');
+      const status = document.getElementById('uploadStatus');
+      if (!fileInput.files.length) {
+        status.textContent = 'Please choose a file first.';
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+
+      status.textContent = 'Uploading and processing...';
+      const res = await fetch('/upload', { method: 'POST', body: formData });
+      const data = await res.json();
+
+      if (res.ok) {
+        status.textContent = `✅ ${data.message} (${data.num_chunks} chunks)`;
+        loadDocuments();
+      } else {
+        status.textContent = `❌ Error: ${data.detail}`;
+      }
+    }
+
+    async function askQuestion() {
+      const docId = document.getElementById('docSelect').value;
+      const query = document.getElementById('questionInput').value;
+      const answerBox = document.getElementById('answer');
+
+      if (!docId) {
+        answerBox.innerHTML = '<span class="error">Upload a document first.</span>';
+        return;
+      }
+
+      answerBox.textContent = 'Thinking...';
+
+      const res = await fetch('/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, doc_id: docId })
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        answerBox.textContent = data.answer;
+      } else {
+        answerBox.innerHTML = `<span class="error">Error: ${data.detail}</span>`;
+      }
+    }
+
+    loadDocuments();
+  </script>
+
+</body>
+</html> -->
